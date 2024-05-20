@@ -1,9 +1,10 @@
-include "lua/externals.lua"
+require("externals")
+require("workspace")
 
 local function ProjectHeader(project_data)
   project (project_data.name)
     kind (project_data.kind)
-    language "C++"
+    language (project_data.language)
 
     if project_data.cppdialect ~= nil then
       cppdialect (project_data.cppdialect)
@@ -13,14 +14,24 @@ local function ProjectHeader(project_data)
 
     if project_data.kind == "StaticLib" then
       staticruntime "On"
-    elseif project_data.kind ~= "DynamicLib" and project_data.staticruntime ~= nil then
+    elseif project_data.kind ~= "SharedLib" and project_data.staticruntime ~= nil then
       staticruntime (project_data.staticruntime)
-    elseif project_data.kind ~= "DynamicLib" then
+    elseif project_data.kind ~= "SharedLib" then
       staticruntime "On"
     end
 
-    targetdir (tdir)
-    objdir (odir)
+    if project_data.tdir == nil then
+      assert(Tdir ~= nil, "Tdir is nil")
+      project_data.tdir = Tdir
+    end
+
+    if project_data.odir == nil then
+      assert(Odir ~= nil, "Odir is nil")
+      project_data.odir = Odir
+    end
+
+    targetdir (project_data.tdir)
+    objdir (project_data.odir)
 end
 
 local function ProcessConfigurations(project , external)
@@ -51,6 +62,7 @@ local function ProcessConfigurations(project , external)
       end
 
     filter "configurations:Debug"
+      defines { "OE_DEBUG_BUILD" }
       if project.debug_configuration ~= nil then
         project.debug_configuration()
       else
@@ -60,9 +72,13 @@ local function ProcessConfigurations(project , external)
       end
       if not external then
         ProcessDependencies("Debug")
+        if project.extra_dependencies ~= nil then
+          project.extra_dependencies("Debug")
+        end
       end
 
     filter "configurations:Release"
+      defines { "OE_RELEASE_BUILD" }
       if project.release_configuration ~= nil then
         project.release_configuration()
       else
@@ -71,6 +87,9 @@ local function ProcessConfigurations(project , external)
       end
       if not external then
         ProcessDependencies("Release")
+        if project.extra_dependencies ~= nil then
+          project.extra_dependencies("Release")
+        end
       end
 end
 
@@ -107,12 +126,42 @@ function AddExternalProject(project)
   ProjectHeader(project)
     project.files()
     project.include_dirs()
+    if (project.externalincludedirs ~= nil) then
+      project.externalincludedirs()
+    end
 
     if project.defines ~= nil then
       project.defines()
     end
 
     ProcessConfigurations(project , true)
+end
+
+function AddModule(project)
+  local success, message = VerifyProject(project)
+  if not success then
+    print(" -- Error: " .. message)
+    return
+  end
+
+  project.include_dirs = project.include_dirs or function() end
+
+  print(" -- Adding Module : " .. project.name)
+  ProjectHeader(project)
+    project.files()
+
+    if project.language ~= "C++" then 
+      return
+    end
+    
+    if project.defines ~= nil then
+      project.defines()
+    end
+
+    project.include_dirs()
+
+    ProcessProjectComponents(project)
+    ProcessConfigurations(project)
 end
 
 function AddProject(project)
@@ -136,5 +185,9 @@ function AddProject(project)
     end
 
     ProcessConfigurations(project)
-    RunPostBuildCommands()
+
+    if project.post_build_commands ~= nil then
+      project.post_build_commands()
+    end
+      
 end

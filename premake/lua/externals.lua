@@ -1,4 +1,4 @@
-require("ordered_pairs")
+include "ordered_pairs.lua"
 
 local function FirstToUpper(str)
   return (str:gsub("^%l", string.upper))
@@ -6,7 +6,7 @@ end
 
 local external_paths = {}
 
-local external = {
+External = {
   -- Example
   -- Mono = {
   --   include_dir = "%{wks.location}/externals/mono/include" ,
@@ -47,18 +47,60 @@ local function AddInclude(table)
   end
 end
 
+function ProcessProjectComponents(project, config)
+  if project.components == nil then
+    return
+  end
+
+  for lib, comp in pairs(project.components) do
+    links { lib }
+    externalincludedirs { comp }
+  end
+end
+
+function ProcessDependency(configuration , lib_data) 
+  local matches_config = true
+
+  local target = FirstToUpper(os.target())
+
+  if configuration ~= nil and lib_data.configurations ~= nil then
+    if Contains(lib_data.configurations, configuration) then
+      matches_config = true
+    end
+  end
+
+  local is_debug = configuration == "Debug"
+
+  if matches_config then
+    local continue_link = true
+
+    if lib_data[target] ~= nil then
+      continue_link = not LinkDependency(lib_data[target], is_debug, target)
+      AddInclude(lib_data[target])
+    end
+
+    if continue_link then
+      LinkDependency(lib_data, is_debug, target)
+    end
+
+    AddInclude(lib_data)
+  end
+end
+
 function ProcessDependencies(configuration)
-  if #external == 0 then
+  if #External == 0 then
     return
   end
 
   local target = FirstToUpper(os.target())
 
-  for _, lib_data in OrderedPairs(external) do
+  for key, lib_data in OrderedPairs(External) do
     local matches_config = true
 
     if configuration ~= nil and lib_data.configurations ~= nil then
-      matches_config = string.find(lib_data.configurations, configuration)
+      if Contains(lib_data.configurations, configuration) then
+        matches_config = true
+      end
     end
 
     local is_debug = configuration == "Debug"
@@ -83,7 +125,7 @@ end
 function IncludeDependencies(configuration)
   local target = FirstToUpper(os.target())
 
-  for _, lib_data in OrderedPairs(configuration) do
+  for key, lib_data in OrderedPairs(configuration) do
     local matches_config = true
 
     if configuration ~= nil and lib_data.Configurations ~= nil then
@@ -103,6 +145,8 @@ end
 function AddDependencies()
   if #external_paths == 0 then
     return
+  else
+    print("Processing external dependencies")
   end
 
   print("[ Group ] : Externals")
@@ -121,13 +165,7 @@ function AddDependency(data)
 
   if data.path ~= nil then
     table.insert(external_paths, data.path)
-  else
-    print("AddDependency: data.name is nil")
   end
 
-  table.insert(external, data)
-end
-
-function AddExternal()
-  AddDependencies()
+  table.insert(External, data)
 end

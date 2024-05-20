@@ -2,6 +2,9 @@
 bin/
 bin_obj/
 
+.cache/
+raycast-benching.txt
+
 # Prerequisites
 *.d
 

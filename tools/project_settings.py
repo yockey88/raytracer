@@ -1,5 +1,5 @@
-EXE_NAME = "project"
-PROJECT_NAME = "TestWorkspace"
+EXE_NAME = "raytracer"
+PROJECT_NAME = "raytracer"
 
 TOOLS_DIR = "tools"
 
