@@ -73,4 +73,18 @@ class DiffuseLight : public Material {
     Ref<Texture> texture;
 };
 
+class Isotropic : public Material {
+  public:
+    Isotropic(const Color& albedo)
+      : texture(NewRef<SolidColor>(albedo)) {}
+
+    Isotropic(Ref<Texture> tex)
+      : texture(tex) {}
+
+    virtual bool Scatter(const Ray& r_in , const HitRecord& rec , Color& attenuation , Ray& scattered) const override;
+
+  private:
+    Ref<Texture> texture;
+};
+
 #endif // !MATERIAL_HPP

@@ -58,3 +58,9 @@ bool Dielectric::Scatter(const Ray& r_in , const HitRecord& rec , Color& attentu
 Color DiffuseLight::Emitted(double u , double v , const Point3& p) const {
   return texture->Value(u , v , p);
 }
+
+bool Isotropic::Scatter(const Ray& r_in , const HitRecord& rec , Color& attenuation , Ray& scattered) const {
+  scattered = Ray(rec.point , RandomUnitVector() , r_in.Time());
+  attenuation = texture->Value(rec.u , rec.v , rec.point);
+  return true;
+}

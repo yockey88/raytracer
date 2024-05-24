@@ -68,6 +68,10 @@ inline double RandomDouble(double min , double max) {
   return min + (max - min) * RandomDouble(); 
 }
 
+inline int32_t RandomInt() {
+  return int32_t(RandomDouble());
+}
+
 inline int32_t RandomInt(int min , int max) {
   return int32_t(RandomDouble(min , max + 1));
 }

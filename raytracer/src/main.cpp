@@ -1,5 +1,7 @@
+#include <chrono>
 #include <iostream>
 
+#include "constant_medium.hpp"
 #include "defines.hpp"
 #include "hittable.hpp"
 #include "hittable_list.hpp"
@@ -271,8 +273,163 @@ void CornellBox(const std::string& file_name) {
   cam.Render(world);
 }
 
+void CornellSmoke(const std::string& file_name) {
+  HittableList world;
+
+  auto red = NewRef<Lambertian>(Color(0.65 , 0.05 , 0.05));
+  auto white = NewRef<Lambertian>(Color(0.73 , 0.73 , 0.73));
+  auto green = NewRef<Lambertian>(Color(0.12 , 0.45 , 0.15));
+  auto light = NewRef<DiffuseLight>(Color(7 , 7 , 7));
+
+  world.Add(NewRef<Quad>(Point3(555 , 0 , 0) , glm::vec3(0 , 555 , 0) , glm::vec3(0 , 0 , 555) , green));
+  world.Add(NewRef<Quad>(Point3(0 , 0 , 0) , glm::vec3(0 , 555 , 0) , glm::vec3(0 , 0 , 555) , red));
+  world.Add(NewRef<Quad>(Point3(113 , 554 , 127) , glm::vec3(330 , 0 , 0) , glm::vec3(0 , 0 , 305) , light));
+  world.Add(NewRef<Quad>(Point3(0 , 0 , 0) , glm::vec3(555 , 0 , 0) , glm::vec3(0 , 0 , 555) , white));
+  world.Add(NewRef<Quad>(Point3(555 , 555 , 555) , glm::vec3(-555 , 0 , 0) , glm::vec3(0 , 0 , -555) , white));
+  world.Add(NewRef<Quad>(Point3(0 , 0 , 555) , glm::vec3(555 , 0 , 0) , glm::vec3(0 , 555 , 0) , white));
+
+  Ref<Hittable> box1 = CreateBox(Point3(0 , 0 , 0) , Point3(165 , 330 , 165) , white);
+  box1 = NewRef<RotateY>(box1 , 15);
+  box1 = NewRef<Translate>(box1 , glm::vec3(265 , 0 , 295));
+
+  Ref<Hittable> box2 = CreateBox(Point3(0 , 0 , 0) , Point3(165 , 165 , 165) , white);
+  box2 = NewRef<RotateY>(box2 , -18);
+  box2 = NewRef<Translate>(box2 , glm::vec3(130 , 0 , 65));
+
+  world.Add(NewRef<ConstantMedium>(box1 , 0.01 , Color(0 , 0 , 0)));
+  world.Add(NewRef<ConstantMedium>(box2 , 0.01 , Color(1 , 1 , 1)));
+
+  Camera cam;
+
+  cam.aspect_ratio = 1.0;
+  cam.img_width = 600;
+  cam.samples_per_pixel = 500;
+  cam.max_depth = 50;
+  cam.background = Color(0 , 0 , 0);
+
+  cam.vfov = 40;
+  cam.camera_loc = Point3(278 , 278 , -800);
+  cam.target = Point3(278 , 278 , 0);
+  cam.vup = glm::vec3(0 , 1 , 0);
+
+  cam.defocus_angle = 0;
+
+  cam.img_file = file_name;
+
+  cam.Render(world);
+}
+
+void FinalScene(const std::string& file_name , int img_width , int samples_per_pixel , int max_depth) {
+  HittableList boxes1;
+
+  auto ground = NewRef<Lambertian>(Color(0.48 , 0.83 , 0.53));
+
+  int32_t boxes_per_side = 20;
+  for (auto i = 0; i < boxes_per_side; ++i) {
+    for (auto j = 0; j < boxes_per_side; ++j) {
+      auto w = 100.0;
+      auto x0 = -1000.0 + i*w;
+      auto z0 = -1000.0 + j*w;
+      auto y0 = 0.0;
+      auto x1 = x0 + w;
+      auto y1 = RandomDouble(1,101);
+      auto z1 = z0 + w;
+
+      boxes1.Add(CreateBox(Point3(x0 , y0 , z0) , Point3(x1 , y1 , z1) , ground));
+    }
+  }
+
+  HittableList world;
+
+  world.Add(NewRef<BvhNode>(boxes1));
+
+  auto light = NewRef<DiffuseLight>(Color(7 , 7 , 7));
+  world.Add(NewRef<Quad>(Point3(123 , 554 , 147) , glm::vec3(300 , 0 , 0) , glm::vec3(0 , 0 , 265) , light));
+
+  auto center1 = Point3(400, 400, 200);
+  auto center2 = center1 + glm::vec3(30,0,0);
+  auto sphere_material = NewRef<Lambertian>(Color(0.7, 0.3, 0.1));
+  world.Add(NewRef<Sphere>(center1, center2, 50, sphere_material));
+
+  world.Add(NewRef<Sphere>(Point3(260 , 150 , 45) , 50 , NewRef<Dielectric>(1.5)));
+  world.Add(NewRef<Sphere>(Point3(0 , 150 , 145) , 50 , NewRef<Metal>(Color(0.8 , 0.8 , 0.9) , 1.0)));
+
+  auto boundary = NewRef<Sphere>(Point3(360 , 150 , 145) , 70 , NewRef<Dielectric>(1.5));
+  world.Add(boundary);
+  world.Add(NewRef<ConstantMedium>(boundary , 0.2 , Color(0.2 , 0.4 , 0.9)));
+  
+  boundary = NewRef<Sphere>(Point3(0 , 0 , 0) , 1000 , NewRef<Dielectric>(1.5));
+  world.Add(boundary);
+
+  auto emat = NewRef<Lambertian>(NewRef<ImageTexture>("images/earthmap.jpg"));
+  world.Add(NewRef<Sphere>(Point3(400 , 200 , 400) , 100 , emat));
+
+  auto pertext = NewRef<NoiseTexture>(0.2);
+  world.Add(NewRef<Sphere>(Point3(220 , 280 , 300) , 80 , NewRef<Lambertian>(pertext)));
+
+  HittableList boxes2;
+  auto white = NewRef<Lambertian>(Color(0.73 , 0.73 , 0.73));
+  int32_t ns = 1000;
+  for (int32_t i = 0; i < ns; ++i) {
+    boxes2.Add(NewRef<Sphere>(RandomVec3(0 , 165) , 10 , white));
+  }
+
+  world.Add(NewRef<Translate>(NewRef<RotateY>(NewRef<BvhNode>(boxes2) , 15) , glm::vec3(-100 , 270 , 395)));
+
+  Camera cam;
+
+  cam.aspect_ratio = 1.0;
+  cam.img_width = img_width;
+  cam.samples_per_pixel = samples_per_pixel;
+  cam.max_depth = max_depth;
+  cam.background = Color(0 , 0 , 0);
+
+  cam.vfov = 40;
+  cam.camera_loc = Point3(478 , 278 , -600);
+  cam.target = Point3(278 , 278 , 0);
+  cam.vup = glm::vec3(0 , 1 , 0);
+
+  cam.defocus_angle = 0;
+
+  cam.Render(world);
+}
+
+void MonteCarlo() {
+  int32_t sample = 0;
+  int32_t stratified_sample = 0;
+
+  int32_t sqrt_n = 10000;
+
+  auto before = std::chrono::system_clock::now();
+  for (auto i = 0u; i < sqrt_n; ++i) {
+    for (auto j = 0u; j < sqrt_n; ++j) {
+      auto x = RandomDouble(-1 , 1);
+      auto y = RandomDouble(-1 , 1);
+
+      if (x * x + y * y < 1) {
+        sample++;
+      }
+
+      x = 2 * ((i + RandomDouble()) / sqrt_n) - 1;
+      y = 2 * ((j + RandomDouble()) / sqrt_n) - 1;
+
+      if (x * x + y * y < 1) {
+        stratified_sample++;
+      }
+    }
+  }
+  auto after = std::chrono::system_clock::now();
+  auto dur = after - before;
+
+  std::cout << "Monte Carlo time : " << dur.count() << "\n\n";
+  std::cout << std::fixed << std::setprecision(12);
+
+  std::cout << "Pi (no stratification) = " << (4.0 * sample) / (sqrt_n * sqrt_n) << "\n";
+  std::cout << "Pi (stratification) = " << (4.0 * stratified_sample) / (sqrt_n * sqrt_n) << "\n";
+}
+
 int main() {
-  uint32_t example = 6;
+  uint32_t example = 9;
 
   switch (example) {
     case 0: BouncingSpheres("bouncing_spheres.ppm"); break;
@@ -282,6 +439,9 @@ int main() {
     case 4: Quads("quads1.ppm"); break;
     case 5: SimpleLight("simple_light3.ppm" , 4); break;
     case 6: CornellBox("cornell_box2.ppm"); break;
+    case 7: CornellSmoke("cornell_smoke.ppm"); break;
+    case 8: FinalScene("the_next_week.ppm" , 800 , 1000 , 50); break;
+    case 9: MonteCarlo(); break;
     default:
       std::cout << "INVALID EXAMPLE" << std::endl;
   }
