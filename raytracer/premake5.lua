@@ -1,7 +1,7 @@
 local raytracer = {}
 raytracer.name = "raytracer"
 raytracer.path = "./raytracer"
-raytracer.kind = "ConsoleApp"
+raytracer.kind = "StaticLib"
 raytracer.language = "C++"
 raytracer.cppdialect = "C++latest"
 

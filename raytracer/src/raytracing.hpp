@@ -1,5 +1,8 @@
-#include <chrono>
-#include <iostream>
+/**
+ * \file raytracing.hpp
+ **/
+#ifndef RAYTRACING_HPP
+#define RAYTRACING_HPP
 
 #include "constant_medium.hpp"
 #include "defines.hpp"
@@ -12,7 +15,7 @@
 #include "bvh.hpp"
 #include "texture.hpp"
 
-void BouncingSpheres(const std::string& file_name) {
+static void BouncingSpheres(const std::string& file_name) {
   HittableList world;
 
   auto checker = NewRef<CheckerTexture>(0.32 , Color(0.2 , 0.3 , 0.1) , Color(0.9 , 0.9 , 0.9));
@@ -81,7 +84,7 @@ void BouncingSpheres(const std::string& file_name) {
   cam.Render(world);
 }
 
-void CheckeredSpheres(const std::string& file_name) {
+static void CheckeredSpheres(const std::string& file_name) {
   HittableList world;
   
   auto checker = NewRef<CheckerTexture>(0.32 , Color(0.2 , 0.3 , 0.1) , Color(0.9 , 0.9 , 0.9));
@@ -110,7 +113,7 @@ void CheckeredSpheres(const std::string& file_name) {
   cam.Render(world);
 }
 
-void Earth(const std::string& file_name) {
+static void Earth(const std::string& file_name) {
   auto earth_tex = NewRef<ImageTexture>("images/earthmap.jpg");
   auto earth_mat = NewRef<Lambertian>(earth_tex);
   auto globe = NewRef<Sphere>(Point3(0 , 0 , 0) , 2 , earth_mat);
@@ -135,7 +138,7 @@ void Earth(const std::string& file_name) {
   cam.Render(HittableList(globe));
 }
 
-void PerlinSpheres(const std::string& file_name , double scale) {
+static void PerlinSpheres(const std::string& file_name , double scale) {
   HittableList world;
 
   auto pertext = NewRef<NoiseTexture>(scale);
@@ -162,7 +165,7 @@ void PerlinSpheres(const std::string& file_name , double scale) {
   cam.Render(world);
 }
 
-void Quads(const std::string& file_name) {
+static void Quads(const std::string& file_name) {
   HittableList world;
 
   auto left_red = NewRef<Lambertian>(Color(1.0 , 0.2 , 0.2));
@@ -197,7 +200,7 @@ void Quads(const std::string& file_name) {
   cam.Render(world);
 }
 
-void SimpleLight(const std::string& file_name , double scale) {
+static void SimpleLight(const std::string& file_name , double scale) {
   HittableList world;
 
   auto pertext = NewRef<NoiseTexture>(scale);
@@ -228,7 +231,7 @@ void SimpleLight(const std::string& file_name , double scale) {
   cam.Render(world);
 }
 
-void CornellBox(const std::string& file_name) {
+static void CornellBox(const std::string& file_name) {
   HittableList world;
 
   auto red = NewRef<Lambertian>(Color(0.65 , 0.05 , 0.05));
@@ -273,7 +276,7 @@ void CornellBox(const std::string& file_name) {
   cam.Render(world);
 }
 
-void CornellSmoke(const std::string& file_name) {
+static void CornellSmoke(const std::string& file_name) {
   HittableList world;
 
   auto red = NewRef<Lambertian>(Color(0.65 , 0.05 , 0.05));
@@ -319,7 +322,7 @@ void CornellSmoke(const std::string& file_name) {
   cam.Render(world);
 }
 
-void FinalScene(const std::string& file_name , int img_width , int samples_per_pixel , int max_depth) {
+static void FinalScene(const std::string& file_name , int img_width , int samples_per_pixel , int max_depth) {
   HittableList boxes1;
 
   auto ground = NewRef<Lambertian>(Color(0.48 , 0.83 , 0.53));
@@ -394,57 +397,50 @@ void FinalScene(const std::string& file_name , int img_width , int samples_per_p
   cam.Render(world);
 }
 
-void MonteCarlo() {
-  int32_t sample = 0;
-  int32_t stratified_sample = 0;
+static void Stratification(const std::string& file) {
+  HittableList world;
 
-  int32_t sqrt_n = 10000;
+  auto red = NewRef<Lambertian>(Color(0.65 , 0.05 , 0.05));
+  auto white = NewRef<Lambertian>(Color(0.73 , 0.73 , 0.73));
+  auto green = NewRef<Lambertian>(Color(0.12 , 0.45 , 0.15));
+  auto light = NewRef<DiffuseLight>(Color(15 , 15 , 15));
 
-  auto before = std::chrono::system_clock::now();
-  for (auto i = 0u; i < sqrt_n; ++i) {
-    for (auto j = 0u; j < sqrt_n; ++j) {
-      auto x = RandomDouble(-1 , 1);
-      auto y = RandomDouble(-1 , 1);
+  world.Add(NewRef<Quad>(Point3(555 , 0 , 0) , glm::vec3(0 , 0 , 555) , glm::vec3(0 , 555 , 0) , green));
+  world.Add(NewRef<Quad>(Point3(0 , 0 , 555) , glm::vec3(0 , 0 , -555) , glm::vec3(0 , 555 , 0) , red));
+  world.Add(NewRef<Quad>(Point3(0 , 555 , 0) , glm::vec3(555 , 0 , 0) , glm::vec3(0 , 0 , 555) , white));
+  world.Add(NewRef<Quad>(Point3(0 , 0 , 555) , glm::vec3(555 , 0 , 0) , glm::vec3(0 , 0 , -555) , white));
+  world.Add(NewRef<Quad>(Point3(555 , 0 , 555) , glm::vec3(-555 , 0 , 0) , glm::vec3(0 , 555 , 0) , white));
 
-      if (x * x + y * y < 1) {
-        sample++;
-      }
+  world.Add(NewRef<Quad>(Point3(213 , 554 , 227) , glm::vec3(130 , 0 , 0) , glm::vec3(0 , 0 , 105) , light));
 
-      x = 2 * ((i + RandomDouble()) / sqrt_n) - 1;
-      y = 2 * ((j + RandomDouble()) / sqrt_n) - 1;
+  Ref<Hittable> box1 = CreateBox(Point3(0 , 0 , 0) , Point3(165 , 330 , 165) , white);
+  box1 = NewRef<RotateY>(box1 , 15);
+  box1 = NewRef<Translate>(box1 , glm::vec3(265 , 0 , 295));
+  world.Add(box1);
 
-      if (x * x + y * y < 1) {
-        stratified_sample++;
-      }
-    }
-  }
-  auto after = std::chrono::system_clock::now();
-  auto dur = after - before;
+  Ref<Hittable> box2 = CreateBox(Point3(0 , 0 , 0) , Point3(165 , 165 , 165) , white);
+  box2 = NewRef<RotateY>(box2 , -18);
+  box2 = NewRef<Translate>(box2 , glm::vec3(130 , 0 , 65));
+  world.Add(box2);
+  
+  Camera cam;
 
-  std::cout << "Monte Carlo time : " << dur.count() << "\n\n";
-  std::cout << std::fixed << std::setprecision(12);
+  cam.aspect_ratio = 1.0;
+  cam.img_width = 600;
+  cam.samples_per_pixel = 200;
+  cam.max_depth = 50;
+  cam.background = Color(0 , 0 , 0);
 
-  std::cout << "Pi (no stratification) = " << (4.0 * sample) / (sqrt_n * sqrt_n) << "\n";
-  std::cout << "Pi (stratification) = " << (4.0 * stratified_sample) / (sqrt_n * sqrt_n) << "\n";
+  cam.vfov = 40;
+  cam.camera_loc = Point3(278 , 278 , -800);
+  cam.target = Point3(278 , 278 , 0);
+  cam.vup = glm::vec3(0 , 1 , 0);
+
+  cam.defocus_angle = 0;
+
+  cam.img_file = file;
+
+  cam.Render(world);
 }
 
-int main() {
-  uint32_t example = 9;
-
-  switch (example) {
-    case 0: BouncingSpheres("bouncing_spheres.ppm"); break;
-    case 1: CheckeredSpheres("checkered_spheres1.ppm"); break;
-    case 2: Earth("earth1.ppm"); break;
-    case 3: PerlinSpheres("perlin_spheres4.ppm" , 4); break;
-    case 4: Quads("quads1.ppm"); break;
-    case 5: SimpleLight("simple_light3.ppm" , 4); break;
-    case 6: CornellBox("cornell_box2.ppm"); break;
-    case 7: CornellSmoke("cornell_smoke.ppm"); break;
-    case 8: FinalScene("the_next_week.ppm" , 800 , 1000 , 50); break;
-    case 9: MonteCarlo(); break;
-    default:
-      std::cout << "INVALID EXAMPLE" << std::endl;
-  }
-
-  return 0;
-}
+#endif // !RAYTRACING_HPP

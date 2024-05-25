@@ -48,9 +48,11 @@ void Camera::Render(const Hittable& world) {
 
   auto pixel_func = [this , &world , &latch](size_t i , size_t j) {
     Color pixel_col(0 , 0 , 0);
-    for (auto sample = 0; sample < samples_per_pixel; ++sample) {
-      Ray r = GetRay(i , j);
-      pixel_col += RayColor(r , max_depth , world);
+    for (auto s_j = 0; s_j < sqrt_spp; ++s_j) {
+      for (auto s_i = 0; s_i < sqrt_spp; ++s_i) {
+        Ray r = GetRay(i , j , s_i , s_j);
+        pixel_col += RayColor(r , max_depth , world);
+      }
     }
 
     size_t idx = i + j * img_width;
@@ -97,6 +99,9 @@ void Camera::Initialize() {
 
   pixel_samples_scale = 1.0 / samples_per_pixel;
 
+  sqrt_spp = glm::sqrt(samples_per_pixel);
+  recip_sqrt_spp = 1.0 / sqrt_spp;
+
   center = camera_loc;
 
   auto h = glm::tan(DegreesToRadians(vfov) / 2);
@@ -128,8 +133,8 @@ void Camera::Initialize() {
   final_pixels.resize(img_width * img_height);
 }
 
-Ray Camera::GetRay(uint32_t i , uint32_t j) const {
-  auto offset = SampleSquare();
+Ray Camera::GetRay(uint32_t i , uint32_t j , uint32_t s_i , uint32_t s_j) const {
+  auto offset = SampleSquareStratified(s_i , s_j);
   auto pixel_sample = pixel00_loc + 
                       ((i + offset.x) * pixel_del_u) +
                       ((j + offset.y) * pixel_del_v);
@@ -145,6 +150,13 @@ Ray Camera::GetRay(uint32_t i , uint32_t j) const {
     
 glm::vec3 Camera::SampleSquare() const {
   return glm::vec3(RandomDouble() - 0.5 , RandomDouble() - 0.5 , 0);
+}
+    
+glm::vec3 Camera::SampleSquareStratified(uint32_t s_i , uint32_t s_j) const {
+  auto px = ((s_i + RandomDouble()) * recip_sqrt_spp) - 0.5;
+  auto py = ((s_j + RandomDouble()) * recip_sqrt_spp) - 0.5;
+
+  return glm::vec3(px , py , 0);
 }
     
 glm::vec3 Camera::SampleDisk(double radius) const {

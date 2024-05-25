@@ -40,8 +40,11 @@ class Camera {
     void Render(const Hittable& world); 
 
   private:
+    uint32_t sqrt_spp = 0;
+
     double img_height;
     double pixel_samples_scale;
+    double recip_sqrt_spp;
 
     Point3 center;
     Point3 pixel00_loc;
@@ -61,9 +64,11 @@ class Camera {
 
     void Initialize();
 
-    Ray GetRay(uint32_t i , uint32_t j) const;
+    Ray GetRay(uint32_t i , uint32_t j , uint32_t s_i , uint32_t s_j) const;
 
     glm::vec3 SampleSquare() const;
+    
+    glm::vec3 SampleSquareStratified(uint32_t s_i , uint32_t s_j) const;
 
     glm::vec3 SampleDisk(double radius) const;
 

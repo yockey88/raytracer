@@ -15,6 +15,7 @@ configuration.platforms = { "Windows" }
 
 configuration.groups = {
   ["raytracer"] = { "./raytracer" } ,
+  ["examples"] = { "./examples" } ,
 }
 
 local glad = {}
