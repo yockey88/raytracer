@@ -35,3 +35,19 @@ bool HittableList::Hit(const Ray& r , Interval rayt , HitRecord& rec) const {
 Aabb HittableList::BoundingBox() const {
   return bbox;
 }
+
+double HittableList::PdfValue(const Point3& origin , const glm::vec3& direction) const {
+  auto weight = 1.0 / objects.size();
+  auto sum = 0.0;
+
+  for (const auto& obj : objects) {
+    sum += weight * obj->PdfValue(origin , direction);
+  }
+
+  return sum;
+}
+
+glm::vec3 HittableList::Random(const Point3& origin) const {
+  auto int_size = int32_t(objects.size());
+  return objects[RandomInt(0 , int_size - 1)]->Random(origin);
+}

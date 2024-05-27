@@ -37,7 +37,7 @@ class Camera {
 
     std::string img_file = "image.ppm";
 
-    void Render(const Hittable& world); 
+    void Render(const Hittable& world , const Ref<Hittable>& lights); 
 
   private:
     uint32_t sqrt_spp = 0;
@@ -74,7 +74,7 @@ class Camera {
 
     Point3 DefocusDiskSample() const;
 
-    Color RayColor(const Ray& r , int32_t depth , const Hittable& world) const;
+    Color RayColor(const Ray& r , int32_t depth , const Hittable& world , const Ref<Hittable>& lights) const;
 
     void WriteToFile();
 };

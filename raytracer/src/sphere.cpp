@@ -61,6 +61,14 @@ Aabb Sphere::BoundingBox() const {
   return bbox; 
 }
 
+double Sphere::PdfValue(const Point3& origin , const glm::vec3& direction) const {
+  return 0.0;
+}
+
+glm::vec3 Sphere::Random(const Point3& origin) const {
+  return glm::vec3(1 , 0 , 0);
+}
+
 Point3 Sphere::SphereCenter(double time) const {
   /// linearly interpolate from center1 to center2 according to time,
   ///   t = 0 => center1 and t = 1 => center 2

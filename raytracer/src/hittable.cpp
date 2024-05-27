@@ -33,6 +33,14 @@ Aabb Translate::BoundingBox() const {
   return bbox;
 }
 
+double Translate::PdfValue(const Point3& origin , const glm::vec3& direction) const {
+  return object->PdfValue(origin , direction);
+}
+
+glm::vec3 Translate::Random(const Point3& origin) const {
+  return object->Random(origin);
+}
+
 RotateY::RotateY(Ref<Hittable> object , double angle)
     : object(object) , angle(angle) {
   auto radians = DegreesToRadians(angle);
@@ -105,4 +113,12 @@ bool RotateY::Hit(const Ray& r , Interval rayt , HitRecord& rec) const {
 
 Aabb RotateY::BoundingBox() const {
   return bbox; 
+}
+
+double RotateY::PdfValue(const Point3& origin , const glm::vec3& direction) const {
+  return object->PdfValue(origin , direction);
+}
+
+glm::vec3 RotateY::Random(const Point3& origin) const {
+  return object->Random(origin);
 }

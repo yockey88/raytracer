@@ -21,6 +21,10 @@ class ConstantMedium : public Hittable {
     virtual bool Hit(const Ray& r , Interval rayt , HitRecord& rec) const override;
 
     virtual Aabb BoundingBox() const override;
+    
+    virtual double PdfValue(const Point3& origin , const glm::vec3& direction) const override;
+
+    virtual glm::vec3 Random(const Point3& origin) const override;
 
   private:
     Ref<Hittable> boundary;

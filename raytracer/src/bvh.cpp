@@ -48,6 +48,22 @@ bool BvhNode::Hit(const Ray& r , Interval rayt , HitRecord& rec) const {
 Aabb BvhNode::BoundingBox() const {
   return bbox;
 }
+    
+double BvhNode::PdfValue(const Point3& origin , const glm::vec3& direction) const {
+  auto weight = 1.0 / 2.0;
+  auto sum = 0.0;
+  
+  sum += weight * left->PdfValue(origin , direction);
+  sum += weight * right->PdfValue(origin , direction);
+
+  return sum;
+} 
+
+glm::vec3 BvhNode::Random(const Point3& origin) const {
+  auto random = RandomInt();
+  return random % 2 == 0 ?
+    left->Random(origin) : right->Random(origin);
+}
 
 bool BvhNode::BoxCompare(const Ref<Hittable> a , const Ref<Hittable> b , int axis_index) {
   auto a_axis_interval = a->BoundingBox().AxisInterval(axis_index);

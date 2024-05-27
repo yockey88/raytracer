@@ -1,5 +1,5 @@
-EXE_NAME = "other_ex"
-PROJECT_NAME = "other_ex"
+EXE_NAME = "raytracing_ex"
+PROJECT_NAME = "raytracer"
 
 TOOLS_DIR = "tools"
 

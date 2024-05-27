@@ -3,6 +3,8 @@
  **/
 #include "quad.hpp"
 
+#include "defines.hpp"
+
 Quad::Quad(const Point3& Q , const glm::vec3& u , const glm::vec3& v , Ref<Material> mat) 
     : Q(Q) , u(u) , v(v) , material(mat) {
   auto n = glm::cross(u , v);
@@ -10,13 +12,15 @@ Quad::Quad(const Point3& Q , const glm::vec3& u , const glm::vec3& v , Ref<Mater
   D = glm::dot(normal , Q);
   w = n / glm::dot(n , n);
 
+  area = n.length();
+
   SetBoundingBox();
 }
     
 bool Quad::Hit(const Ray& r , Interval rayt , HitRecord& rec) const {
   auto denom = glm::dot(normal , r.Direction());
     
-  if (fabs(denom) < 1e-8) {
+  if (std::fabs(denom) < 1e-8) {
     return false;
   }
 
@@ -44,6 +48,26 @@ bool Quad::Hit(const Ray& r , Interval rayt , HitRecord& rec) const {
 
 Aabb Quad::BoundingBox() const {
   return bbox;
+}
+    
+double Quad::PdfValue(const Point3& origin , const glm::vec3& direction) const {
+  HitRecord rec;
+  if (!Hit(Ray(origin , direction) , Interval(0.001 , infinity) , rec)) {
+    return 0.0;
+  }
+
+  double dist_sqrd = rec.t * rec.t * LengthSquared(direction);
+  double cosine = std::fabs(glm::dot(direction , rec.normal)) / direction.length();
+  if (cosine == 0) {
+    return 0.0;
+  }
+
+  return dist_sqrd / (cosine * area);
+}
+
+glm::vec3 Quad::Random(const Point3& origin) const {
+  auto p = Q + (RandomDouble() * u) + (RandomDouble() * v);
+  return p - origin;
 }
 
 void Quad::SetBoundingBox() {

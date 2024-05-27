@@ -7,15 +7,25 @@
 #include "defines.hpp"
 #include "ray.hpp"
 #include "texture.hpp"
+#include "pdf.hpp"
 
 class HitRecord;
+
+class ScatterRecord {
+  public:
+    Color attenuation;
+    Ref<Pdf> pdf;
+    bool skip_pdf;
+    Ray skip_pdf_ray;
+};
 
 class Material {
   public:
     virtual ~Material() = default;
 
-    virtual bool Scatter(const Ray& r_in , const HitRecord& rec , Color& attentuation , Ray& scattered) const;
-    virtual Color Emitted(double u , double v , const Point3& p) const;
+    virtual bool Scatter(const Ray& r_in , const HitRecord& rec , ScatterRecord& srec) const;
+    virtual double ScatteringPdf(const Ray& r_in , const HitRecord& rec , const Ray& scattered) const;
+    virtual Color Emitted(const Ray& r_in , const HitRecord& rec , double u , double v , const Point3& p) const;
 };
 
 class Lambertian : public Material {
@@ -25,7 +35,8 @@ class Lambertian : public Material {
     Lambertian(Ref<Texture> tex) 
       : texture(tex) {}
 
-    virtual bool Scatter(const Ray& r_in , const HitRecord& rec , Color& attentuation , Ray& scattered) const override;
+    virtual bool Scatter(const Ray& r_in , const HitRecord& rec , ScatterRecord& srec) const override;
+    virtual double ScatteringPdf(const Ray& r_in , const HitRecord& rec , const Ray& scattered) const override;
 
   private:
     Ref<Texture> texture;
@@ -36,7 +47,7 @@ class Metal : public Material {
     Metal(const Color& albedo , double fuzz) 
       : albedo(albedo) , fuzz(fuzz < 1 ? fuzz : 1) {}
 
-    virtual bool Scatter(const Ray& r_in , const HitRecord& rec , Color& attentuation , Ray& scattered) const override;
+    virtual bool Scatter(const Ray& r_in , const HitRecord& rec , ScatterRecord& srec) const override;
 
   private:
     Color albedo;
@@ -48,16 +59,12 @@ class Dielectric : public Material {
     Dielectric(double refraction_idx)
       : refraction_idx(refraction_idx) {}
 
-    virtual bool Scatter(const Ray& r_in , const HitRecord& rec , Color& attentuation , Ray& scattered) const override;
+    virtual bool Scatter(const Ray& r_in , const HitRecord& rec , ScatterRecord& srec) const override;
 
   private:
     double refraction_idx;
 
-    static double Reflectance(double cos , double refraction_idx) {
-      auto r0 = (1 - refraction_idx) / (1 + refraction_idx);
-      r0 = r0 * r0;
-      return r0 + (1 - r0) * glm::pow((1 - cos) , 5);
-    }
+    static double Reflectance(double cos , double refraction_idx);
 };
 
 class DiffuseLight : public Material {
@@ -67,7 +74,7 @@ class DiffuseLight : public Material {
     DiffuseLight(const Color& emit)
       : texture(NewRef<SolidColor>(emit)) {}
 
-    virtual Color Emitted(double u , double v , const Point3& p) const override;
+    virtual Color Emitted(const Ray& r_in , const HitRecord& rec , double u , double v , const Point3& p) const override;
 
   private:
     Ref<Texture> texture;
@@ -81,7 +88,9 @@ class Isotropic : public Material {
     Isotropic(Ref<Texture> tex)
       : texture(tex) {}
 
-    virtual bool Scatter(const Ray& r_in , const HitRecord& rec , Color& attenuation , Ray& scattered) const override;
+    virtual bool Scatter(const Ray& r_in , const HitRecord& rec , ScatterRecord& srec) const override;
+
+    virtual double ScatteringPdf(const Ray& r_in , const HitRecord& rec , const Ray& scattered) const override;
 
   private:
     Ref<Texture> texture;

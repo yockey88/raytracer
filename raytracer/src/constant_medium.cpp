@@ -70,3 +70,11 @@ bool ConstantMedium::Hit(const Ray& r , Interval rayt , HitRecord& rec) const {
 Aabb ConstantMedium::BoundingBox() const {
   return boundary->BoundingBox();
 }
+
+double ConstantMedium::PdfValue(const Point3& origin , const glm::vec3& direction) const {
+  return boundary->PdfValue(origin , direction);
+}
+
+glm::vec3 ConstantMedium::Random(const Point3& origin) const {
+  return boundary->Random(origin);
+}

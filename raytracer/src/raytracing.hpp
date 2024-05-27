@@ -17,6 +17,7 @@
 
 static void BouncingSpheres(const std::string& file_name) {
   HittableList world;
+  Ref<Hittable> lights = NewRef<HittableList>();
 
   auto checker = NewRef<CheckerTexture>(0.32 , Color(0.2 , 0.3 , 0.1) , Color(0.9 , 0.9 , 0.9));
   auto ground_mat = NewRef<Lambertian>(checker);
@@ -81,11 +82,12 @@ static void BouncingSpheres(const std::string& file_name) {
   cam.img_file = file_name;
 
   /// Rendering
-  cam.Render(world);
+  cam.Render(world , lights);
 }
 
 static void CheckeredSpheres(const std::string& file_name) {
   HittableList world;
+  Ref<Hittable> lights = NewRef<HittableList>();
   
   auto checker = NewRef<CheckerTexture>(0.32 , Color(0.2 , 0.3 , 0.1) , Color(0.9 , 0.9 , 0.9));
   auto checker_mat = NewRef<Lambertian>(checker);
@@ -110,7 +112,7 @@ static void CheckeredSpheres(const std::string& file_name) {
 
   cam.img_file = file_name;
 
-  cam.Render(world);
+  cam.Render(world , lights);
 }
 
 static void Earth(const std::string& file_name) {
@@ -135,11 +137,13 @@ static void Earth(const std::string& file_name) {
 
   cam.img_file = file_name;
 
-  cam.Render(HittableList(globe));
+  Ref<Hittable> lights = NewRef<HittableList>();
+  cam.Render(HittableList(globe) , lights);
 }
 
 static void PerlinSpheres(const std::string& file_name , double scale) {
   HittableList world;
+  Ref<Hittable> lights = NewRef<HittableList>();
 
   auto pertext = NewRef<NoiseTexture>(scale);
   world.Add(NewRef<Sphere>(Point3(0 , -1000 , 0) , 1000 , NewRef<Lambertian>(pertext)));
@@ -162,11 +166,12 @@ static void PerlinSpheres(const std::string& file_name , double scale) {
 
   cam.img_file = file_name;
 
-  cam.Render(world);
+  cam.Render(world , lights);
 }
 
 static void Quads(const std::string& file_name) {
   HittableList world;
+  Ref<Hittable> lights = NewRef<HittableList>();
 
   auto left_red = NewRef<Lambertian>(Color(1.0 , 0.2 , 0.2));
   auto back_green = NewRef<Lambertian>(Color(0.2 , 1.0 , 0.2));
@@ -197,19 +202,20 @@ static void Quads(const std::string& file_name) {
 
   cam.img_file = file_name;
 
-  cam.Render(world);
+  cam.Render(world , lights);
 }
 
 static void SimpleLight(const std::string& file_name , double scale) {
   HittableList world;
+  Ref<HittableList> lights = NewRef<HittableList>();
 
   auto pertext = NewRef<NoiseTexture>(scale);
   world.Add(NewRef<Sphere>(Point3(0 , -1000 , 0) , 1000 , NewRef<Lambertian>(pertext)));
   world.Add(NewRef<Sphere>(Point3(0 , 2 , 0) , 2 , NewRef<Lambertian>(pertext)));
 
-  auto difflight = NewRef<DiffuseLight>(Color(4 , 4 , 4));
-  world.Add(NewRef<Sphere>(Point3(0 , 7 , 0) , 2 , difflight));
-  world.Add(NewRef<Quad>(Point3(3 , 1 , -2) , glm::vec3(2 , 0 , 0) , glm::vec3(0 , 2 , 0) , difflight));
+  auto difflight = NewRef<Material>();
+  lights->Add(NewRef<Sphere>(Point3(0 , 7 , 0) , 2 , difflight));
+  lights->Add(NewRef<Quad>(Point3(3 , 1 , -2) , glm::vec3(2 , 0 , 0) , glm::vec3(0 , 2 , 0) , difflight));
 
   Camera cam;
 
@@ -228,7 +234,7 @@ static void SimpleLight(const std::string& file_name , double scale) {
 
   cam.img_file = file_name;
 
-  cam.Render(world);
+  cam.Render(world , lights);
 }
 
 static void CornellBox(const std::string& file_name) {
@@ -241,26 +247,38 @@ static void CornellBox(const std::string& file_name) {
 
   world.Add(NewRef<Quad>(Point3(555 , 0 , 0) , glm::vec3(0 , 555 , 0) , glm::vec3(0 , 0 , 555) , green));
   world.Add(NewRef<Quad>(Point3(0 , 0 , 0) , glm::vec3(0 , 555 , 0) , glm::vec3(0 , 0 , 555) , red));
-  world.Add(NewRef<Quad>(Point3(343 , 554 , 332) , glm::vec3(-130 , 0 , 0) , glm::vec3(0 , 0 , -105) , light));
   world.Add(NewRef<Quad>(Point3(0 , 0 , 0) , glm::vec3(555 , 0 , 0) , glm::vec3(0 , 0 , 555) , white));
   world.Add(NewRef<Quad>(Point3(555 , 555 , 555) , glm::vec3(-555 , 0 , 0) , glm::vec3(0 , 0 , -555) , white));
   world.Add(NewRef<Quad>(Point3(0 , 0 , 555) , glm::vec3(555 , 0 , 0) , glm::vec3(0 , 555 , 0) , white));
+  
+  world.Add(NewRef<Quad>(Point3(343 , 554 , 332) , glm::vec3(-130 , 0 , 0) , glm::vec3(0 , 0 , -105) , light));
 
-  Ref<Hittable> box1 = CreateBox(Point3(0 , 0 , 0) , Point3(165 , 330 , 165) , white);
+  Ref<Material> aluminum = NewRef<Metal>(Color(0.8 , 0.85 , 0.88) , 0.0);
+  Ref<Hittable> box1 = CreateBox(Point3(0 , 0 , 0) , Point3(165 , 330 , 165) , aluminum);
   box1 = NewRef<RotateY>(box1 , 15);
   box1 = NewRef<Translate>(box1 , glm::vec3(265 , 0 , 295));
   world.Add(box1);
 
+#if 0
   Ref<Hittable> box2 = CreateBox(Point3(0 , 0 , 0) , Point3(165 , 165 , 165) , white);
   box2 = NewRef<RotateY>(box2 , -18);
   box2 = NewRef<Translate>(box2 , glm::vec3(130 , 0 , 65));
   world.Add(box2);
+#else
+  auto glass = NewRef<Dielectric>(1.5);
+  world.Add(NewRef<Sphere>(Point3(190 , 90 , 190) , 90 , glass));
+#endif 
+
+  Ref<HittableList> lights = NewRef<HittableList>();
+  auto m = NewRef<Material>();
+  lights->Add(NewRef<Quad>(Point3(343 , 554 , 332) , glm::vec3(-130 , 0 , 0) , glm::vec3(0 , 0 , -105) , m));
+  // lights.Add(NewRef<Sphere>(Point3(190 , 90 , 190) , 90 , m));
 
   Camera cam;
 
   cam.aspect_ratio = 1.0;
   cam.img_width = 600;
-  cam.samples_per_pixel = 200;
+  cam.samples_per_pixel = 1000;
   cam.max_depth = 50;
   cam.background = Color(0 , 0 , 0);
 
@@ -273,11 +291,12 @@ static void CornellBox(const std::string& file_name) {
 
   cam.img_file = file_name;
 
-  cam.Render(world);
+  cam.Render(world , lights);
 }
 
 static void CornellSmoke(const std::string& file_name) {
   HittableList world;
+  Ref<HittableList> lights = NewRef<HittableList>();
 
   auto red = NewRef<Lambertian>(Color(0.65 , 0.05 , 0.05));
   auto white = NewRef<Lambertian>(Color(0.73 , 0.73 , 0.73));
@@ -286,10 +305,11 @@ static void CornellSmoke(const std::string& file_name) {
 
   world.Add(NewRef<Quad>(Point3(555 , 0 , 0) , glm::vec3(0 , 555 , 0) , glm::vec3(0 , 0 , 555) , green));
   world.Add(NewRef<Quad>(Point3(0 , 0 , 0) , glm::vec3(0 , 555 , 0) , glm::vec3(0 , 0 , 555) , red));
-  world.Add(NewRef<Quad>(Point3(113 , 554 , 127) , glm::vec3(330 , 0 , 0) , glm::vec3(0 , 0 , 305) , light));
   world.Add(NewRef<Quad>(Point3(0 , 0 , 0) , glm::vec3(555 , 0 , 0) , glm::vec3(0 , 0 , 555) , white));
   world.Add(NewRef<Quad>(Point3(555 , 555 , 555) , glm::vec3(-555 , 0 , 0) , glm::vec3(0 , 0 , -555) , white));
   world.Add(NewRef<Quad>(Point3(0 , 0 , 555) , glm::vec3(555 , 0 , 0) , glm::vec3(0 , 555 , 0) , white));
+  
+  world.Add(NewRef<Quad>(Point3(113 , 554 , 127) , glm::vec3(330 , 0 , 0) , glm::vec3(0 , 0 , 305) , light));
 
   Ref<Hittable> box1 = CreateBox(Point3(0 , 0 , 0) , Point3(165 , 330 , 165) , white);
   box1 = NewRef<RotateY>(box1 , 15);
@@ -319,11 +339,12 @@ static void CornellSmoke(const std::string& file_name) {
 
   cam.img_file = file_name;
 
-  cam.Render(world);
+  cam.Render(world , lights);
 }
 
 static void FinalScene(const std::string& file_name , int img_width , int samples_per_pixel , int max_depth) {
   HittableList boxes1;
+  Ref<HittableList> lights = NewRef<HittableList>();
 
   auto ground = NewRef<Lambertian>(Color(0.48 , 0.83 , 0.53));
 
@@ -346,8 +367,8 @@ static void FinalScene(const std::string& file_name , int img_width , int sample
 
   world.Add(NewRef<BvhNode>(boxes1));
 
-  auto light = NewRef<DiffuseLight>(Color(7 , 7 , 7));
-  world.Add(NewRef<Quad>(Point3(123 , 554 , 147) , glm::vec3(300 , 0 , 0) , glm::vec3(0 , 0 , 265) , light));
+  auto light = NewRef<Material>();
+  lights->Add(NewRef<Quad>(Point3(123 , 554 , 147) , glm::vec3(300 , 0 , 0) , glm::vec3(0 , 0 , 265) , light));
 
   auto center1 = Point3(400, 400, 200);
   auto center2 = center1 + glm::vec3(30,0,0);
@@ -394,11 +415,12 @@ static void FinalScene(const std::string& file_name , int img_width , int sample
 
   cam.defocus_angle = 0;
 
-  cam.Render(world);
+  cam.Render(world , lights);
 }
 
 static void Stratification(const std::string& file) {
   HittableList world;
+  Ref<HittableList> lights = NewRef<HittableList>();
 
   auto red = NewRef<Lambertian>(Color(0.65 , 0.05 , 0.05));
   auto white = NewRef<Lambertian>(Color(0.73 , 0.73 , 0.73));
@@ -440,7 +462,7 @@ static void Stratification(const std::string& file) {
 
   cam.img_file = file;
 
-  cam.Render(world);
+  cam.Render(world , lights);
 }
 
 #endif // !RAYTRACING_HPP

@@ -16,9 +16,14 @@ class Quad : public Hittable {
     virtual bool Hit(const Ray& r , Interval rayt , HitRecord& rec) const override;
 
     virtual Aabb BoundingBox() const override;
+    
+    virtual double PdfValue(const Point3& origin , const glm::vec3& direction) const override;
+
+    virtual glm::vec3 Random(const Point3& origin) const override;
 
   private:
     double D;
+    double area;
     Point3 Q;
     glm::vec3 u , v;
     glm::vec3 w;

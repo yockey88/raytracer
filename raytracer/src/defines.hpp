@@ -115,7 +115,7 @@ inline glm::vec3 RandomOnHemisphere(const glm::vec3& normal) {
   if (glm::dot(on_unit_sphere , normal) > 0.0) {
     return on_unit_sphere;
   } else {
-    return on_unit_sphere;
+    return -on_unit_sphere;
   }
 }
 
@@ -148,5 +148,19 @@ inline glm::vec3 RandomVec3InUnitDisk() {
 
   return res;
 }
+
+inline glm::vec3 RandomCosineDirection() {
+  auto r1 = RandomDouble();
+  auto r2 = RandomDouble();
+
+  auto phi = 2 * pi * r1;
+
+  auto x = cos(phi) * sqrt(r2);
+  auto y = sin(phi) * sqrt(r2);
+  auto z = sqrt(1 - r2);
+
+  return glm::vec3(x , y , z);
+}
+
 
 #endif // !DEFINES_HPP

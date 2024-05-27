@@ -7,9 +7,11 @@
 #include <iostream>
 #include <fstream>
 #include <latch>
+#include <syncstream>
 
 #include "defines.hpp"
 #include "material.hpp"
+#include "pdf.hpp"
 
 inline double LinearToGamma(double linear_component) {
   if (linear_component > 0) {
@@ -24,6 +26,18 @@ inline void WriteColor(std::ostream& stream , const Color& color) {
   auto g = color.y;
   auto b = color.z;
 
+  if (r != r) {
+    r = 0.0;
+  }
+
+  if (g != g) {
+    g = 0.0;
+  }
+
+  if (b != b) {
+    b = 0.0;
+  }
+
   r = LinearToGamma(r);
   g = LinearToGamma(g);
   b = LinearToGamma(b);
@@ -36,7 +50,7 @@ inline void WriteColor(std::ostream& stream , const Color& color) {
   stream << ir << ' ' << ig << ' ' << ib << '\n';
 }
 
-void Camera::Render(const Hittable& world) {
+void Camera::Render(const Hittable& world , const Ref<Hittable>& lights) {
   Initialize();
   
   std::cout << "generating pixel data...\n";
@@ -46,12 +60,12 @@ void Camera::Render(const Hittable& world) {
 
   std::latch latch(img_width * img_height);
 
-  auto pixel_func = [this , &world , &latch](size_t i , size_t j) {
+  auto pixel_func = [this , &world , &lights , &latch](size_t i , size_t j) {
     Color pixel_col(0 , 0 , 0);
     for (auto s_j = 0; s_j < sqrt_spp; ++s_j) {
       for (auto s_i = 0; s_i < sqrt_spp; ++s_i) {
         Ray r = GetRay(i , j , s_i , s_j);
-        pixel_col += RayColor(r , max_depth , world);
+        pixel_col += RayColor(r , max_depth , world , lights);
       }
     }
 
@@ -59,7 +73,7 @@ void Camera::Render(const Hittable& world) {
 
     {
       std::unique_lock lck(pixel_mtx);
-      final_pixels[idx] = pixel_col;
+      final_pixels[idx] = pixel_samples_scale * pixel_col;
     }
 
     latch.count_down();
@@ -97,15 +111,16 @@ void Camera::Initialize() {
   img_height = (img_height < 1) ? 
     1 : img_height;
 
-  pixel_samples_scale = 1.0 / samples_per_pixel;
+  sqrt_spp = int32_t(glm::sqrt(samples_per_pixel));
 
-  sqrt_spp = glm::sqrt(samples_per_pixel);
+  pixel_samples_scale = 1.0 / (sqrt_spp * sqrt_spp);
   recip_sqrt_spp = 1.0 / sqrt_spp;
 
   center = camera_loc;
 
-  auto h = glm::tan(DegreesToRadians(vfov) / 2);
-  
+  auto theta = DegreesToRadians(vfov);
+
+  auto h = glm::tan(theta / 2);
   auto viewport_h = 2 * h * focus_dist;
   auto viewport_w = viewport_h * (double(img_width) / img_height);
 
@@ -168,7 +183,7 @@ Point3 Camera::DefocusDiskSample() const {
   return center + (p.x * defocus_disk_u) + (p.y * defocus_disk_v);
 }
     
-Color Camera::RayColor(const Ray& r , int32_t depth , const Hittable& world) const {
+Color Camera::RayColor(const Ray& r , int32_t depth , const Hittable& world , const Ref<Hittable>& lights) const {
   if (depth <= 0) {
     return Color(0 , 0 , 0);
   }
@@ -178,17 +193,37 @@ Color Camera::RayColor(const Ray& r , int32_t depth , const Hittable& world) con
   if (!world.Hit(r , Interval(0.001 , infinity) , rec)) {
     return background;
   }
+  
+  /// this should never happen
+  if (rec.mat == nullptr) {
+    return Color(0 , 0 , 0);
+  }
 
-  Ray scattered;
-  Color attenuation;
-  Color color_from_emission = rec.mat == nullptr ? 
-    Color(0.0 , 0.0 , 0.0) : rec.mat->Emitted(rec.u , rec.v , rec.point);
+  ScatterRecord srec;
+  Color color_from_emission = rec.mat->Emitted(r , rec , rec.u , rec.v , rec.point);
 
-  if (rec.mat != nullptr && !rec.mat->Scatter(r , rec , attenuation , scattered)) {
+  if (!rec.mat->Scatter(r , rec , srec)) {
     return color_from_emission;
   }
 
-  Color color_from_scatter = attenuation * RayColor(scattered , depth - 1 , world);
+  if (srec.skip_pdf) {
+    return srec.attenuation * RayColor(srec.skip_pdf_ray , depth - 1 , world , lights);
+  }
+
+#if 1
+  Ref<Pdf> pdf = NewRef<HittablePdf>(lights , rec.point);
+  // Ref<Pdf> pdf = NewRef<MixturePdf>(light_ptr , srec.pdf);
+#else
+  Ref<Pdf> pdf = srec.pdf;
+#endif
+
+  Ray scattered = Ray(rec.point , pdf->Generate() , r.Time());
+  auto pdf_val = pdf->Value(scattered.Direction());
+
+  double scattering_pdf = rec.mat->ScatteringPdf(r , rec , scattered);
+
+  Color sample_color = RayColor(scattered , depth - 1 , world , lights);
+  Color color_from_scatter = (srec.attenuation * scattering_pdf * sample_color) / pdf_val;
 
   return color_from_emission + color_from_scatter;
 }
@@ -202,12 +237,14 @@ void Camera::WriteToFile() {
   if (!img.is_open()) {
     std::cout << "file not open" << std::endl;
     return;
+  } else {
+    std::cout << "Writing image : images/" << img_file << std::endl;
   }
 
   img << "P3\n" << img_width << ' ' << img_height << "\n255\n";
 
   for (auto& pixel : final_pixels) {
-    WriteColor(img , pixel_samples_scale * pixel);
+    WriteColor(img , pixel);
   }
 
   std::chrono::time_point<std::chrono::steady_clock> after = std::chrono::steady_clock::now();
